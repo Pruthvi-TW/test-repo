@@ -1,0 +1,24 @@
+```yaml
+server:
+  port: 8082
+
+spring:
+  application:
+    name: mock-uidai-service
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    
+mock-uidai:
+  simulation:
+    min-latency-ms: 100
+    max-latency-ms: 500
+  logging:
+    mask-pattern: "[0-9]{8}([0-9]{4})"
+    mask-replacement: "********$1"
+```
+
+This is the first part of the implementation. Would you like me to continue with the remaining files including the controllers, services, and utilities?
