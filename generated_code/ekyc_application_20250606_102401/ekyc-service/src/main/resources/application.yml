@@ -1,0 +1,30 @@
+```yaml
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ekyc-service
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ekyc_db
+    username: ekyc_user
+    password: ekyc_password
+    
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    
+uidai:
+  base-url: http://localhost:8082
+  endpoints:
+    initiate-ekyc: /api/uidai/internal/v1/ekyc/initiate
+    verify-otp: /api/uidai/internal/v1/ekyc/verify
+```
