@@ -1,0 +1,20 @@
+```yaml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ekyc_db
+      POSTGRES_USER: ekyc_user
+      POSTGRES_PASSWORD: ekyc_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+```
+
+I'll continue with the core domain models and DTOs in the next response. Would you like me to proceed with those files?
