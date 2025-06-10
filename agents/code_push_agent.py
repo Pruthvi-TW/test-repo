@@ -69,15 +69,16 @@ class CodePushAgent(BaseAgent):
         approval_status = guardrails_results.get('approval_status', 'REJECTED')
         return approval_status in ['APPROVED', 'CONDITIONAL']
     
-    def _push_to_github(self, generated_files: list, dependency_analysis: Dict[str, Any], 
+    def _push_to_github(self, generated_files: list, dependency_analysis: Dict[str, Any],
                        tech_stack, state: WorkflowState) -> Dict[str, Any]:
         """Push generated code to GitHub repository."""
-        
+
         try:
-            # Create local directory structure
-            project_name = f"{tech_stack.language}-{tech_stack.framework}-app"
+            # Create local directory structure with timestamp
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            project_name = f"{tech_stack.language}-{tech_stack.framework}-app-{timestamp}"
             local_path = Config.get_temp_path(project_name)
-            
+
             # Clean and create directory
             if os.path.exists(local_path):
                 import shutil
@@ -86,50 +87,86 @@ class CodePushAgent(BaseAgent):
             
             # Write generated files
             self._write_files_to_disk(generated_files, local_path)
-            
+
             # Write dependency file
             self._write_dependency_file(dependency_analysis, local_path, tech_stack)
-            
+
             # Create README
             self._create_readme(local_path, state)
-            
-            # Initialize git repository
-            repo = git.Repo.init(local_path)
-            
-            # Add all files
-            repo.git.add(A=True)
-            
-            # Commit
-            commit_message = f"Initial commit: {tech_stack.language} {tech_stack.framework} application"
-            repo.index.commit(commit_message)
-            
-            # Push to GitHub (if token is available)
-            repository_url = Config.GITHUB_REPO_URL
-            if Config.GITHUB_TOKEN:
-                # Add remote and push
-                origin = repo.create_remote('origin', repository_url)
-                origin.push(refspec='main:main')
-                
-                return {
-                    'status': 'success',
-                    'repository_url': repository_url,
-                    'local_path': local_path,
-                    'commit_hash': str(repo.head.commit),
-                    'files_pushed': len(generated_files) + 2,  # +2 for dependency file and README
-                    'branch': 'main'
-                }
-            else:
-                return {
-                    'status': 'local_only',
-                    'repository_url': repository_url,
-                    'local_path': local_path,
-                    'commit_hash': str(repo.head.commit),
-                    'files_created': len(generated_files) + 2,
-                    'note': 'GitHub token not provided - code saved locally only'
-                }
-                
+
+            # Instead of creating a new repo, add to existing repo
+            return self._add_to_existing_repo(local_path, project_name, tech_stack, generated_files)
+
         except Exception as e:
-            self.log_progress(f"Error in GitHub push: {str(e)}", "error")
+            self.log_progress(f"Error in code push process: {str(e)}", "error")
+            raise
+
+    def _add_to_existing_repo(self, local_path: str, project_name: str, tech_stack, generated_files: list) -> Dict[str, Any]:
+        """Add generated code to the existing repository."""
+        try:
+            # Get the current repository root
+            current_dir = os.getcwd()
+
+            # Create a new directory in generated_code for this application
+            output_dir = Config.get_output_path(project_name)
+
+            # Copy files from temp to generated_code
+            import shutil
+            if os.path.exists(output_dir):
+                shutil.rmtree(output_dir)
+            shutil.copytree(local_path, output_dir)
+
+            # Try to add and commit to the existing repo
+            try:
+                import git
+                repo = git.Repo(current_dir)
+
+                # Add the new files
+                repo.git.add(output_dir)
+
+                # Commit
+                commit_message = f"Add generated {tech_stack.language} {tech_stack.framework} application: {project_name}"
+                repo.index.commit(commit_message)
+
+                # Push to origin
+                if Config.GITHUB_TOKEN:
+                    origin = repo.remote('origin')
+                    origin.push()
+
+                    return {
+                        'status': 'success',
+                        'repository_url': Config.GITHUB_REPO_URL,
+                        'local_path': output_dir,
+                        'commit_hash': str(repo.head.commit),
+                        'files_pushed': len(generated_files) + 2,
+                        'branch': 'main',
+                        'project_name': project_name
+                    }
+                else:
+                    return {
+                        'status': 'committed_locally',
+                        'repository_url': Config.GITHUB_REPO_URL,
+                        'local_path': output_dir,
+                        'commit_hash': str(repo.head.commit),
+                        'files_created': len(generated_files) + 2,
+                        'note': 'Committed locally - no GitHub token for push',
+                        'project_name': project_name
+                    }
+
+            except Exception as git_error:
+                self.log_progress(f"Git operations failed: {str(git_error)}", "warning")
+                return {
+                    'status': 'files_saved',
+                    'repository_url': Config.GITHUB_REPO_URL,
+                    'local_path': output_dir,
+                    'files_created': len(generated_files) + 2,
+                    'note': 'Files saved locally - Git operations failed',
+                    'project_name': project_name,
+                    'error': str(git_error)
+                }
+
+        except Exception as e:
+            self.log_progress(f"Error saving files: {str(e)}", "error")
             raise
     
     def _write_files_to_disk(self, generated_files: list, base_path: str):
