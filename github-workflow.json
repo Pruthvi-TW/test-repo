@@ -1,0 +1,175 @@
+{
+  "name": "GitHub Folder Upload - Working",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "02ffc870-4a98-4bb8-bba4-e37fc9639050",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        460,
+        840
+      ]
+    },
+    {
+      "parameters": {
+        "command": "cd /Users/pruthvipradhan/Documents/n8n && find . -maxdepth 3 -type f ! -name '.*' ! -path '*/node_modules/*' ! -path '*/.git/*' ! -name '*.lock' | head -20"
+      },
+      "id": "8e1423c7-c03b-476d-b80f-250155801f1d",
+      "name": "List Files",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        680,
+        840
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse file list and create items for each file\nconst output = $input.first().json.stdout || '';\nconst files = output.split('\\n').filter(f => f.trim() && !f.includes('.git'));\n\nconsole.log('Found files:', files);\n\nif (files.length === 0) {\n  return [{ json: { error: 'No files found' } }];\n}\n\n// Return each file as separate item\nreturn files.map(file => {\n  const cleanPath = file.replace('./', '');\n  return {\n    json: {\n      fileName: cleanPath,\n      fullPath: `/Users/pruthvipradhan/Documents/n8n/${cleanPath}`\n    }\n  };\n});"
+      },
+      "id": "2cbc2994-193e-4856-b008-a88e2845e34f",
+      "name": "Parse Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        840
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=base64 -i \"{{$json.fullPath}}\" | tr -d '\\n'"
+      },
+      "id": "95fbf9d9-5421-4891-a9eb-add3c9248f80",
+      "name": "Encode to Base64",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        840
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare final data for GitHub\nconst fileName = $('Parse Files').item.json.fileName;\nconst base64Content = $input.first().json.stdout.trim();\n\n// Debug logging\nconsole.log('Processing file:', fileName);\nconsole.log('Base64 content length:', base64Content.length);\n\n// Validate data\nif (!fileName) {\n  throw new Error('No filename provided');\n}\nif (!base64Content) {\n  throw new Error(`No content for file: ${fileName}`);\n}\n\nreturn [{\n  json: {\n    fileName: fileName,\n    content: base64Content,\n    message: `Add ${fileName} via n8n - ${new Date().toISOString()}`\n  }\n}];"
+      },
+      "id": "a11e03d0-298d-4989-a5de-eae52ed692ff",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        840
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://api.github.com/repos/Pruthvi-TW/test-repo/contents/{{$json.fileName}}",
+        "authentication": "headerAuth",
+        "headerAuth": {
+          "name": "Authorization",
+          "value": "Bearer YOUR_GITHUB_TOKEN_HERE"
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "n8n"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": \"{{ $json.message }}\",\n  \"content\": \"{{ $json.content }}\",\n  \"branch\": \"main\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "47698518-5deb-4d06-bc88-ab46de29515a",
+      "name": "GitHub Upload",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        840
+      ]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "List Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Files": {
+      "main": [
+        [
+          {
+            "node": "Parse Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Files": {
+      "main": [
+        [
+          {
+            "node": "Encode to Base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Encode to Base64": {
+      "main": [
+        [
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Data": {
+      "main": [
+        [
+          {
+            "node": "GitHub Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "1",
+  "pinData": {},
+  "meta": {
+    "instanceId": "ff00dbac036c3bcaa1e627b00f77818f6e618f7546a69d171306cbb6da466583"
+  }
+}

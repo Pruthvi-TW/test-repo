@@ -1,0 +1,31 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+  h2:
+    console:
+      enabled: true
+  flyway:
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+logging:
+  level:
+    root: INFO
+    org.springframework: WARN
+    com.ekyc: DEBUG
+
+# Disable external service calls in test environment
+ekyc:
+  external-services:
+    enabled: false
+
+# Test-specific security configurations
+security:
+  test-mode: true

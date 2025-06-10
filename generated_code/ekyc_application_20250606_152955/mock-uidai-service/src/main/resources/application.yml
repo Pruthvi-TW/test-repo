@@ -1,0 +1,43 @@
+server:
+  port: 8082
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: mock-uidai-service
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+# Logging configuration
+logging:
+  level:
+    root: INFO
+    com.mockuidai: INFO
+    org.springframework.web.filter.CommonsRequestLoggingFilter: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Springdoc OpenAPI configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+    disable-swagger-default-url: true
+  packages-to-scan: com.mockuidai.controller
+
+# Mock UIDAI service configuration
+mock-uidai:
+  # Default latency range in milliseconds
+  latency:
+    min: 300
+    max: 1200
+  # Maximum number of requests to keep in history
+  history-size: 100
+  # Default valid OTP
+  valid-otp: "123456"

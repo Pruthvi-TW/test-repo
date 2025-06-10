@@ -1,0 +1,1 @@
+Create a simple Python web scraper that can extract article titles and URLs from a news website. The scraper should use requests and BeautifulSoup libraries, include error handling for network issues, and save the results to a JSON file. Add proper documentation and example usage.

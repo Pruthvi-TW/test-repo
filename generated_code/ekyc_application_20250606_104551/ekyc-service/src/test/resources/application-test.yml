@@ -1,0 +1,26 @@
+```yaml
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:14:///ekyc_test
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+    
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    
+  flyway:
+    enabled: false
+
+logging:
+  level:
+    com.ekyc: DEBUG
+    org.springframework.test: DEBUG
+
+ekyc:
+  retention:
+    days: 1
+  security:
+    api-key: test-api-key
+  audit:
+    enabled: true
+```

@@ -1,0 +1,51 @@
+```yaml
+spring:
+  application:
+    name: ekyc-verification-service
+
+  # Database Configuration
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ekyc_db
+    username: ekyc_user
+    password: ekyc_password
+    driver-class-name: org.postgresql.Driver
+
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  # Flyway Configuration
+  flyway:
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+
+# Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /ekyc/v1
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+    com.ekyc: DEBUG
+
+# Application-specific Configuration
+ekyc:
+  uidai:
+    api:
+      base-url: https://uidai.gov.in/api/v1
+      timeout: 5000
+  security:
+    otp-expiry-minutes: 10
+```

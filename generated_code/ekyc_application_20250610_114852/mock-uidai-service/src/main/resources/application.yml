@@ -1,0 +1,27 @@
+```yaml
+server:
+  port: 8082
+
+spring:
+  application:
+    name: mock-uidai-service
+
+logging:
+  level:
+    root: INFO
+    com.mockuidai: DEBUG
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+
+mock-uidai:
+  latency:
+    min-ms: 500
+    max-ms: 2000
+  audit:
+    max-entries: 1000
+```
