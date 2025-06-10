@@ -1,0 +1,141 @@
+version: '3.8'
+
+services:
+  ekyc-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ekyc-verification-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://ekyc-db:5432/ekyc_verification_db
+      - SPRING_DATASOURCE_USERNAME=ekyc_user
+      - SPRING_DATASOURCE_PASSWORD=ekyc_password
+      - SPRING_FLYWAY_ENABLED=true
+      - MOCK_UIDAI_SERVICE_URL=http://mock-uidai:8082
+      - LOGGING_LEVEL_COM_KYC_VERIFICATION=DEBUG
+      - SERVER_PORT=8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - ekyc-db
+      - mock-uidai
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - ekyc-network
+
+  ekyc-db:
+    image: postgres:15-alpine
+    container_name: ekyc-db
+    environment:
+      - POSTGRES_DB=ekyc_verification_db
+      - POSTGRES_USER=ekyc_user
+      - POSTGRES_PASSWORD=ekyc_password
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+    volumes:
+      - ekyc-db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ekyc_user -d ekyc_verification_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    networks:
+      - ekyc-network
+
+  mock-uidai:
+    build:
+      context: ./mock-uidai
+      dockerfile: Dockerfile
+    container_name: mock-uidai-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+      - SERVER_PORT=8082
+      - LOGGING_LEVEL_COM_KYC_VERIFICATION=DEBUG
+    ports:
+      - "8082:8082"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    networks:
+      - ekyc-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    networks:
+      - ekyc-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin_password
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - ekyc-network
+
+volumes:
+  ekyc-db-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  ekyc-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
